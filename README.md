@@ -1,6 +1,6 @@
 # Opal.Chien · 醫療 AI 手記
 
-以 Armin Ronacher 的文字部落格（https://lucumr.pocoo.org/）為風格參考，製作的個人網站。採用原創配色、圖紋與版面程式；沒有使用參考站的文章或圖片。
+
 
 ## 執行
 
