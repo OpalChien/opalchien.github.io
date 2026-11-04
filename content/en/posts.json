@@ -1,0 +1,103 @@
+[
+  {
+    "slug": "from-model-to-workflow", "title": "From Model to Clinic: Engineering Beyond Training", "date": "2026-11-04", "category": "Engineering",
+    "summary": "Inference is one step. Inputs, outputs, error handling, and traceability turn a model into a system people can use.", "tags": ["Clinical AI", "PACS / RIS"], "minutes": 5,
+    "sections": [
+      { "type": "paragraph", "text": "Once a model has finished training, accuracy is no longer the only question. Where do images come from? Which examination does an inference belong to? How do we rerun a failed case? These details determine whether downstream workflows can make sense of the result." },
+      { "type": "heading", "text": "Define the boundaries of an inference" },
+      { "type": "paragraph", "text": "Before implementation, decide whether the input unit is an image, a series, or an entire study. Keep the mapping between internal case IDs and the source examination. Record the model version, configuration version, and processing time together." },
+      { "type": "list", "items": ["Input checks: file completeness, the expected series, and required metadata.", "Processing records: preprocessing settings, model version, execution status, and failure reasons.", "Output contract: file formats, the mask coordinate space, summary fields, and output location."] },
+      { "type": "heading", "text": "Make failure a state you can handle" },
+      { "type": "paragraph", "text": "One unreadable case should not stop an entire batch. Case-level try / except handling, separate logs, and a CSV summary that records both success and failure provide a clear entry point for investigation. Before rerunning, check whether the existing output is complete rather than merely checking for a directory." },
+      { "type": "callout", "text": "A maintainable output unit: case ID + model version + result files + execution status." },
+      { "type": "heading", "text": "Treat the model as part of a workflow" },
+      { "type": "paragraph", "text": "Establish inputs and outputs in a reproducible offline pipeline before adding PACS / RIS integration. Define the boundary between model output and the official clinical report, the human review process, and the procedure for changing model versions. This note is an engineering planning example; implementation still requires design and validation under the hospital's procedures." }
+    ]
+  },
+  {
+    "slug": "patient-level-split", "title": "Split Patients Before Images: The Basics of Data Partitioning", "date": "2026-10-28", "category": "Research",
+    "summary": "Examinations from the same patient may be more similar than expected. Establish independence before training.", "tags": ["Data Leakage", "Validation"], "minutes": 4,
+    "sections": [
+      { "type": "paragraph", "text": "An imaging dataset is not necessarily a collection of independent samples. A patient may have multiple examinations, an examination may contain different reconstructions, and a series may produce many slices. Shuffling all images can obscure those relationships." },
+      { "type": "heading", "text": "Start with a traceable data manifest" },
+      { "type": "paragraph", "text": "Map every image to its patient, study, and series, then choose the grouping level that fits the research question. For patient-level prediction, group by patient ID before partitioning. Separately inspect repeated exports, derived images, and near-duplicate copies." },
+      { "type": "code", "language": "python", "text": "# Check for patient overlap after assigning the splits.\ntrain_ids = set(train_df[\"patient_id\"])\nval_ids = set(val_df[\"patient_id\"])\ntest_ids = set(test_df[\"patient_id\"])\n\nassert train_ids.isdisjoint(val_ids)\nassert train_ids.isdisjoint(test_ids)\nassert val_ids.isdisjoint(test_ids)" },
+      { "type": "heading", "text": "Save the split as a research artifact" },
+      { "type": "list", "items": ["Keep split.csv with anonymized IDs, partitions, and folds.", "Fix the seed and save the actual assignments.", "Describe patient counts, examination counts, and label distributions for each partition.", "Ensure normalization, feature selection, and threshold setting use only the permitted training or validation data."] },
+      { "type": "paragraph", "text": "If the question concerns generalization across time, hospitals, or devices, the validation design needs corresponding independent partitions. Non-overlapping patients are a starting point; they do not replace the external validation required by the research question." }
+    ]
+  },
+  {
+    "slug": "medical-image-geometry", "title": "A Mask's Position Matters as Much as Its Accuracy", "date": "2026-10-20", "category": "Imaging",
+    "summary": "Track spacing, orientation, and coordinate space from DICOM to NIfTI so segmentation stays aligned through conversion.", "tags": ["DICOM", "NIfTI", "Segmentation"], "minutes": 6,
+    "sections": [
+      { "type": "paragraph", "text": "Matching array shapes do not guarantee that an image and its mask share a physical space. Three-dimensional imaging requires tracking spacing, origin, direction, and every transformation applied during preprocessing." },
+      { "type": "heading", "text": "Distinguish indices from physical coordinates" },
+      { "type": "paragraph", "text": "Array indices describe data organization in memory, while physical coordinates describe position in space. Imaging libraries may follow different axis orders and coordinate conventions. Confirm the assumptions of both the reader and writer before conversion." },
+      { "type": "list", "items": ["Record shape, spacing, origin, and the direction matrix on input.", "Keep reversible transformation information for every crop, resampling, or reorientation.", "Transform predictions into the intended reference image space before export.", "Inspect multiplanar overlays for laterality, position, and boundary alignment."] },
+      { "type": "heading", "text": "Choose interpolation for the data type" },
+      { "type": "paragraph", "text": "Discrete label masks usually use nearest-neighbor interpolation to avoid introducing nonexistent labels. Images and probability maps need interpolation suited to their purpose. A shared target shape is not enough; the target coordinate space must also match." },
+      { "type": "callout", "text": "Check alignment using both metadata and overlays. Either alone can miss axis-order or orientation mistakes." },
+      { "type": "heading", "text": "Make exported results reviewable" },
+      { "type": "paragraph", "text": "For each case, save a source metadata summary, preprocessing settings, the final mask, and representative overlays. Use the voxel volume in the actual output space for volume calculations, and state the units and method in the results table." }
+    ]
+  },
+  {
+    "slug": "reproducible-training", "title": "Leave Enough Behind to Reproduce the Next Training Run", "date": "2026-10-12", "category": "Model Training",
+    "summary": "A seed is only the beginning. Keep configurations, data splits, checkpoints, and experiment records together.", "tags": ["PyTorch", "Reproducibility"], "minutes": 5,
+    "sections": [
+      { "type": "paragraph", "text": "Reproducing a training result usually takes more than a seed. Data versions, the actual folds, preprocessing, package versions, and checkpoint selection all affect how we interpret an experiment." },
+      { "type": "heading", "text": "Give each experiment its own directory" },
+      { "type": "code", "language": "text", "text": "runs/experiment_001/\n  config.json\n  split.csv\n  environment.txt\n  train.log\n  metrics.csv\n  checkpoints/\n    best.pt\n    last.pt" },
+      { "type": "heading", "text": "Keep best and last checkpoints separately" },
+      { "type": "paragraph", "text": "Select the best checkpoint using a predefined validation metric. Use the last checkpoint to resume interrupted training. Resuming may require the optimizer, scheduler, AMP scaler, epoch, and random states in addition to model weights." },
+      { "type": "list", "items": ["Record batch size, gradient accumulation, and mixed-precision settings in the configuration.", "Document the monitored metric, direction, and patience for early stopping.", "Write training and validation metrics for every epoch, keeping failure records.", "Reserve the test set for a fixed evaluation procedure once the experiment design is settled."] },
+      { "type": "paragraph", "text": "Different hardware and computational implementations may still introduce nondeterminism. Rather than promising identical runs everywhere, record the environment, control known variables, and describe variability through repeated experiments." }
+    ]
+  },
+  {
+    "slug": "beyond-a-single-metric", "title": "Beyond the Score: Keep the Cases That Went Wrong", "date": "2026-10-05", "category": "Research",
+    "summary": "AUC, Dice, and mAP are summaries. Case-level outputs reveal what an average cannot tell us.", "tags": ["Evaluation", "Error Analysis"], "minutes": 4,
+    "sections": [
+      { "type": "paragraph", "text": "Metrics help compare experiments, but an average cannot describe every failure mode. Keeping predictions and evaluations for individual cases makes it possible to revisit the evidence and later prepare research tables and figures." },
+      { "type": "heading", "text": "Define the evaluation unit first" },
+      { "type": "paragraph", "text": "Image-level, examination-level, and patient-level results answer different questions. Before summarizing, estimating confidence intervals, or resampling, define the independent sampling unit. Multiple images from one patient should not automatically be treated as independent observations." },
+      { "type": "list", "items": ["Classification: keep case labels, prediction scores, the preset threshold, and classification results.", "Detection: keep predicted boxes, scores, annotation matches, and false-positive / false-negative cases.", "Segmentation: keep masks, case-level metrics, volumes, and spatial information."] },
+      { "type": "heading", "text": "Fix evaluation rules before inspecting test results" },
+      { "type": "paragraph", "text": "Define thresholds, matching rules, and exclusion criteria in advance. Repeatedly adjusting them on the test set makes the final score difficult to interpret as independent evaluation. Report exploratory analyses separately from the primary results." },
+      { "type": "callout", "text": "Treat summary.csv as a standard inference output, rather than a file to assemble only when writing the paper." }
+    ]
+  },
+  {
+    "slug": "config-first", "title": "Move Paths Out of Your Code: Start with a Configuration File", "date": "2026-09-24", "category": "Engineering",
+    "summary": "Centralize data locations, model weights, and output directories so the same program is easier to run elsewhere.", "tags": ["Python", "Configuration"], "minutes": 3,
+    "sections": [
+      { "type": "paragraph", "text": "When paths are scattered across Python files, switching machines can mean editing code line by line. Centralizing input, model, parameter, and output settings is a small, practical step toward easier maintenance." },
+      { "type": "heading", "text": "Validate configuration too" },
+      { "type": "list", "items": ["Check that input directories and model weights exist at startup.", "Define what happens if an output directory already exists.", "Save the effective settings in each run's output directory.", "Keep secrets separate from shareable experiment configurations."] },
+      { "type": "heading", "text": "Start simple before making it general" },
+      { "type": "paragraph", "text": "A small research script can begin with argparse and a JSON file. Consider a fuller configuration framework when the project actually needs layered overrides and many experiment combinations. Readability matters more than building complicated abstractions at the start." }
+    ]
+  },
+  {
+    "slug": "mil-traceability", "title": "From Patch to Patient: Preserve the Links in MIL", "date": "2026-09-15", "category": "Model Training",
+    "summary": "Keep patch sources and positions alongside features so attention results can be mapped back to the original image.", "tags": ["MIL", "Attention"], "minutes": 4,
+    "sections": [
+      { "type": "paragraph", "text": "Multiple instance learning often turns images into feature sets and makes predictions at the bag level. If a feature matrix loses the identity of each patch, interpretation and inspection become much harder." },
+      { "type": "heading", "text": "Save features and indices as a pair" },
+      { "type": "list", "items": ["Define how bags map to patients and studies.", "Record each patch's source file, coordinates, size, and preprocessing version.", "Verify that feature matrix rows match the index list order.", "Group by patient so patches from the same source do not cross data partitions."] },
+      { "type": "heading", "text": "Use attention as an entry point for inspection" },
+      { "type": "paragraph", "text": "Attention weights can locate instances given more weight during aggregation, but they should not be treated directly as causal explanations or lesion annotations. Map high-weight patches back to the source image and combine them with failure analysis and other validation methods." }
+    ]
+  },
+  {
+    "slug": "a-place-for-notes", "title": "A Place to Keep the Thoughts Behind the Work", "date": "2026-09-01", "category": "Journal",
+    "summary": "Some things deserve to live beyond the terminal. Keep a record of questions, decisions, and lessons learned.", "tags": ["Notes", "Learning"], "minutes": 2,
+    "sections": [
+      { "type": "paragraph", "text": "Between research and development are details that rarely appear in the final result: why a split changed, how an orientation error was found, or why an experiment was paused. The process is worth keeping." },
+      { "type": "heading", "text": "Write for the next time you face the problem" },
+      { "type": "paragraph", "text": "A note need not be long. Describe the environment, how you identified the cause, what you changed, and how you checked the outcome. With enough context, it is easier to reconnect with the reasoning later." },
+      { "type": "paragraph", "text": "This website is a quiet place for notes on medical imaging AI, research methods, and software engineering, including ideas that are still taking shape." }
+    ]
+  }
+]

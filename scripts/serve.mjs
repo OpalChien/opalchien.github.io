@@ -11,7 +11,7 @@ const portIndex = args.indexOf('--port');
 const port = Number(portIndex < 0 ? 4173 : args[portIndex + 1]);
 if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('請指定有效的 --port');
 if (args.includes('--build')) {
-  const result = spawnSync(process.execPath, [path.join(root, 'scripts/build.mjs')], { stdio: 'inherit' });
+  const result = spawnSync(process.execPath, [path.join(root, 'scripts/build-all.mjs')], { stdio: 'inherit' });
   if (result.status !== 0) process.exit(result.status || 1);
 }
 try { await stat(path.join(output, 'index.html')); } catch { throw new Error('找不到網站輸出，請先執行 npm run build 或 npm run dev'); }

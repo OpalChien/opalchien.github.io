@@ -6,13 +6,15 @@
   <meta name="description" content="不只設定 seed：把 config、資料切分、checkpoint 與實驗紀錄一起保存，讓結果有跡可循。">
   <meta name="theme-color" content="#f8f7f3">
   <link rel="canonical" href="https://opalchien.github.io/posts/reproducible-training/">
+  <link rel="alternate" hreflang="zh-Hant" href="https://opalchien.github.io/posts/reproducible-training/">
+  <link rel="alternate" hreflang="en" href="https://opalchien.github.io/en/posts/reproducible-training/">
   <meta property="og:type" content="article">
   <meta property="og:title" content="讓下一次訓練，能找回這一次的自己 · Opal.Chien">
   <meta property="og:description" content="不只設定 seed：把 config、資料切分、checkpoint 與實驗紀錄一起保存，讓結果有跡可循。"><meta property="og:url" content="https://opalchien.github.io/posts/reproducible-training/">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="alternate" type="application/rss+xml" title="Opal.Chien 的文章" href="/feed.xml">
   <script>try{var t=localStorage.getItem('opal-theme');if(['light','dark','auto'].includes(t))document.documentElement.dataset.theme=t}catch{}</script>
-  <link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/motion.css"><script src="/app.js" defer></script>
+  <link rel="stylesheet" href="/styles.css?v=ef153e6d0f25"><link rel="stylesheet" href="/motion.css?v=ef153e6d0f25"><link rel="stylesheet" href="/enhancements.css?v=ef153e6d0f25"><script src="/app.js?v=ef153e6d0f25" defer></script>
 </head>
 <body data-motion="true" data-parallax="28" style="--motion-duration:900ms;--reveal-distance:28px;--story-height:180vh">
   <a href="#main" class="skip-link">跳到主要內容</a>
@@ -20,7 +22,7 @@
   <div class="top-pattern" aria-hidden="true"></div>
   <header class="site-header shell">
     <a class="brand" href="/" aria-label="Opal.Chien 首頁"><img class="brand-portrait" src="/opal-portrait.png" width="40" height="44" alt=""><span>Opal.Chien<small>THOUGHTS & FIELD NOTES</small></span></a>
-    <div class="header-right"><nav aria-label="主要導覽"><a href="/" aria-current="page">文章</a><a href="/archive/">歸檔</a><a href="/projects/">專案</a><a href="/about/">關於我</a></nav><div class="header-tools"><a class="icon-button" href="/?search=1#search" aria-label="搜尋文章"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.7" cy="10.7" r="6.2"/><path d="m15.4 15.4 4.2 4.2"/></svg></a><button type="button" class="icon-button theme-cycle" aria-label="切換配色"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.5"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg></button></div></div>
+    <div class="header-right"><nav aria-label="主要導覽"><a href="/" aria-current="page">文章</a><a href="/archive/">歸檔</a><a href="/projects/">專案</a><a href="/about/">關於我</a></nav><a class="language-switch" data-language-switch href="/en/posts/reproducible-training/" lang="en" hreflang="en" aria-label="Switch to English">EN</a><div class="header-tools"><a class="icon-button" href="/?search=1#search" aria-label="搜尋文章"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.7" cy="10.7" r="6.2"/><path d="m15.4 15.4 4.2 4.2"/></svg></a><button type="button" class="icon-button theme-cycle" aria-label="切換配色"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.5"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg></button></div></div>
   </header>
   <main id="main" class="shell article-page" tabindex="-1"><a class="back-link" href="/">← 回到所有文章</a><header class="article-header"><p class="eyebrow">模型訓練<span> / </span><time datetime="2026-10-12">2026.10.12</time><span> / </span>5 分鐘閱讀</p><h1>讓下一次訓練，能找回這一次的自己</h1><p class="article-lead">不只設定 seed：把 config、資料切分、checkpoint 與實驗紀錄一起保存，讓結果有跡可循。</p><div class="tags"><span>PyTorch</span><span>Reproducibility</span></div><p class="demo-note"><span class="demo-dot" aria-hidden="true"></span>示範文章 · 此內容用於展示閱讀版面，尚非本人正式發表。</p></header><div class="article-layout"><article class="prose"><p>重現一個訓練結果，往往需要比一個 seed 更多的資訊。資料版本、實際 fold、前處理流程、套件版本及 checkpoint 的選擇，都會影響我們如何理解一次實驗。</p><h2 id="section-1">每個實驗，都有自己的資料夾</h2><div class="code-block"><div class="code-label">text<button class="copy-code" type="button">複製</button></div><pre><code>runs/experiment_001/
   config.json

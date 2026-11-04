@@ -1,12 +1,14 @@
 // 配色偏好儲存在目前瀏覽器；儲存空間不可用時仍可切換。
+const isEnglish = document.documentElement.lang === 'en';
+const allCategory = isEnglish ? 'All' : '全部';
 const themeOptions = ['light', 'dark', 'auto'];
-const themeLabels = { light: '淺色', dark: '深色', auto: '自動' };
+const themeLabels = isEnglish ? { light: 'Light', dark: 'Dark', auto: 'Auto' } : { light: '淺色', dark: '深色', auto: '自動' };
 function setTheme(theme) {
   document.documentElement.dataset.theme = theme;
   try { localStorage.setItem('opal-theme', theme); } catch { /* 隱私模式可能停用 localStorage。 */ }
   document.querySelectorAll('[data-theme-choice]').forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.themeChoice === theme)));
   const cycle = document.querySelector('.theme-cycle');
-  if (cycle) cycle.setAttribute('aria-label', `切換配色，目前為${themeLabels[theme]}`);
+  if (cycle) cycle.setAttribute('aria-label', isEnglish ? `Switch color theme; current: ${themeLabels[theme]}` : `切換配色，目前為${themeLabels[theme]}`);
 }
 setTheme(document.documentElement.dataset.theme || 'light');
 document.querySelectorAll('[data-theme-choice]').forEach((button) => button.addEventListener('click', () => setTheme(button.dataset.themeChoice)));
@@ -21,14 +23,14 @@ if (journal) {
   const pagination = journal.querySelector('.pagination');
   const pageButtons = journal.querySelector('.page-buttons');
   const params = new URLSearchParams(location.search);
-  let category = filters.some((b) => b.dataset.categoryFilter === params.get('category')) ? params.get('category') : '全部';
+  let category = filters.some((b) => b.dataset.categoryFilter === params.get('category')) ? params.get('category') : allCategory;
   let currentPage = Math.max(1, Number.parseInt(params.get('page') || '1', 10) || 1);
   search.value = params.get('q') || '';
   const pageSize = Number(journal.dataset.pageSize);
 
   function render(updateUrl = true) {
     const terms = search.value.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
-    const matches = rows.filter((row) => (category === '全部' || row.dataset.category === category) && terms.every((term) => row.dataset.search.includes(term)));
+    const matches = rows.filter((row) => (category === allCategory || row.dataset.category === category) && terms.every((term) => row.dataset.search.includes(term)));
     const totalPages = Math.max(1, Math.ceil(matches.length / pageSize));
     currentPage = Math.min(currentPage, totalPages);
     rows.forEach((row) => { row.hidden = true; });
@@ -36,7 +38,9 @@ if (journal) {
     filters.forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.categoryFilter === category)));
     journal.querySelector('.empty-state').hidden = matches.length > 0;
     pagination.hidden = false;
-    journal.querySelector('.result-summary').textContent = matches.length ? `顯示 ${(currentPage - 1) * pageSize + 1}–${Math.min(currentPage * pageSize, matches.length)} 篇，共 ${matches.length} 篇` : '共 0 篇文章';
+    const first = (currentPage - 1) * pageSize + 1;
+    const last = Math.min(currentPage * pageSize, matches.length);
+    journal.querySelector('.result-summary').textContent = isEnglish ? (matches.length ? `Showing ${first}–${last} of ${matches.length} ${matches.length === 1 ? 'note' : 'notes'}` : 'No notes found') : (matches.length ? `顯示 ${first}–${last} 篇，共 ${matches.length} 篇` : '共 0 篇文章');
     pageButtons.replaceChildren();
     function addPageButton(label, nextPage, disabled = false, selected = false, ariaLabel) {
       const button = document.createElement('button');
@@ -49,13 +53,13 @@ if (journal) {
       pageButtons.append(button);
     }
     if (totalPages > 1) {
-      addPageButton('←', currentPage - 1, currentPage === 1, false, '上一頁');
-      for (let page = 1; page <= totalPages; page++) addPageButton(String(page).padStart(2, '0'), page, false, page === currentPage, `第 ${page} 頁`);
-      addPageButton('→', currentPage + 1, currentPage === totalPages, false, '下一頁');
+      addPageButton('←', currentPage - 1, currentPage === 1, false, isEnglish ? 'Previous page' : '上一頁');
+      for (let page = 1; page <= totalPages; page++) addPageButton(String(page).padStart(2, '0'), page, false, page === currentPage, isEnglish ? `Page ${page}` : `第 ${page} 頁`);
+      addPageButton('→', currentPage + 1, currentPage === totalPages, false, isEnglish ? 'Next page' : '下一頁');
     }
     if (updateUrl) {
       const nextParams = new URLSearchParams();
-      if (category !== '全部') nextParams.set('category', category);
+      if (category !== allCategory) nextParams.set('category', category);
       if (search.value.trim()) nextParams.set('q', search.value.trim());
       if (currentPage > 1) nextParams.set('page', String(currentPage));
       history.replaceState(null, '', `${location.pathname}${nextParams.size ? `?${nextParams}` : ''}`);
@@ -63,7 +67,7 @@ if (journal) {
   }
   filters.forEach((button) => button.addEventListener('click', () => { category = button.dataset.categoryFilter; currentPage = 1; render(); }));
   search.addEventListener('input', () => { currentPage = 1; render(); });
-  journal.querySelector('.reset-search').addEventListener('click', () => { search.value = ''; category = '全部'; currentPage = 1; render(); search.focus(); });
+  journal.querySelector('.reset-search').addEventListener('click', () => { search.value = ''; category = allCategory; currentPage = 1; render(); search.focus(); });
   document.addEventListener('keydown', (event) => {
     if (event.key === '/' && !event.ctrlKey && !event.metaKey && !event.altKey && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName) && !document.activeElement.isContentEditable) { event.preventDefault(); search.focus(); }
     if (event.key === 'Escape' && document.activeElement === search) { search.value = ''; currentPage = 1; render(); search.blur(); }
@@ -76,10 +80,10 @@ document.querySelectorAll('.copy-code').forEach((button) => button.addEventListe
   const block = button.closest('.code-block');
   try {
     await navigator.clipboard.writeText(block.querySelector('code').textContent);
-    block.querySelector('.copy-status').textContent = '程式碼已複製';
-    button.textContent = '已複製';
+    block.querySelector('.copy-status').textContent = isEnglish ? 'Code copied to clipboard' : '程式碼已複製';
+    button.textContent = isEnglish ? 'Copied' : '已複製';
   } catch {
-    block.querySelector('.copy-status').textContent = '無法存取剪貼簿，請手動選取程式碼。';
+    block.querySelector('.copy-status').textContent = isEnglish ? 'Clipboard unavailable. Please select and copy the code manually.' : '無法存取剪貼簿，請手動選取程式碼。';
   }
 }));
 
@@ -87,10 +91,11 @@ document.querySelectorAll('.copy-code').forEach((button) => button.addEventListe
 (() => {
   if (document.body.dataset.motion !== 'true' || !('IntersectionObserver' in window)) return;
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
-  const compactViewport = matchMedia('(max-height: 680px)');
+  const compactViewport = matchMedia('(max-height: 760px)');
   const root = document.documentElement;
   const header = document.querySelector('.site-header');
   const banner = document.querySelector('.top-pattern');
+  const timelines = [...document.querySelectorAll('.timeline')];
   const story = document.querySelector('.scroll-story');
   const stage = story?.querySelector('.story-sticky');
   const panels = [...document.querySelectorAll('[data-story-panel]')];
@@ -120,6 +125,10 @@ document.querySelectorAll('.copy-code').forEach((button) => button.addEventListe
       const strength = Number(document.body.dataset.parallax) || 0;
       banner.style.backgroundPositionY = `${Math.min(pageTop * .15, strength)}px`;
     }
+    timelines.forEach((timeline) => {
+      const bounds = timeline.getBoundingClientRect();
+      timeline.style.setProperty('--timeline-progress', clamp((window.innerHeight * .75 - bounds.top) / Math.max(1, bounds.height)).toFixed(4));
+    });
     if (!story) return;
     const staticScene = reducedMotion.matches || compactViewport.matches;
     if (staticScene) {
@@ -151,4 +160,47 @@ document.querySelectorAll('.copy-code').forEach((button) => button.addEventListe
   // 篩選會改變文章列表高度，ResizeObserver 同步更新進度與 sticky 範圍。
   if ('ResizeObserver' in window) new ResizeObserver(scheduleUpdate).observe(document.body);
   scheduleUpdate();
+})();
+
+// 掃描光線只在場景可見時播放；滑鼠視差只對精確指標裝置啟用。
+(() => {
+  if (document.body.dataset.motion !== 'true' || !('IntersectionObserver' in window)) return;
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+  const finePointer = matchMedia('(hover: hover) and (pointer: fine)');
+  const visibility = new Map();
+  const syncVisibility = () => visibility.forEach((visible, element) => element.classList.toggle('is-in-view', visible && !reduced.matches && !document.hidden));
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => visibility.set(entry.target, entry.isIntersecting));
+    syncVisibility();
+  }, { threshold: .02 });
+  document.querySelectorAll('.scroll-story, .home-page .page-intro').forEach((element) => observer.observe(element));
+  document.addEventListener('visibilitychange', syncVisibility);
+  reduced.addEventListener('change', syncVisibility);
+
+  const card = document.querySelector('.story-sticky');
+  if (!card) return;
+  let pointerFrame = null;
+  let latestPointer = null;
+  card.addEventListener('pointermove', (event) => {
+    if (reduced.matches || !finePointer.matches) return;
+    latestPointer = { x: event.clientX, y: event.clientY };
+    if (pointerFrame !== null) return;
+    pointerFrame = requestAnimationFrame(() => {
+      pointerFrame = null;
+      if (!latestPointer) return;
+      const rect = card.getBoundingClientRect();
+      const x = Math.min(1, Math.max(0, (latestPointer.x - rect.left) / rect.width));
+      const y = Math.min(1, Math.max(0, (latestPointer.y - rect.top) / rect.height));
+      card.style.setProperty('--pointer-x', `${x * 100}%`);
+      card.style.setProperty('--pointer-y', `${y * 100}%`);
+      card.style.setProperty('--tilt-y', `${(x - .5) * 8}deg`);
+      card.style.setProperty('--tilt-x', `${(.5 - y) * 6}deg`);
+    });
+  }, { passive: true });
+  card.addEventListener('pointerleave', () => {
+    latestPointer = null;
+    if (pointerFrame !== null) { cancelAnimationFrame(pointerFrame); pointerFrame = null; }
+    card.style.setProperty('--tilt-y', '0deg');
+    card.style.setProperty('--tilt-x', '0deg');
+  });
 })();

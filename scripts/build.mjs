@@ -1,6 +1,7 @@
 import { readFile, writeFile, mkdir, cp, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';
 
 // 所有內容與設定都從專案根目錄讀入，不依賴執行命令的位置。
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -10,16 +11,36 @@ const outputName = option('--out', 'dist');
 if (!['dist', 'docs'].includes(outputName)) throw new Error('--out 僅允許 dist 或 docs');
 const output = path.resolve(root, outputName);
 const readJson = async (file) => JSON.parse(await readFile(path.join(root, file), 'utf8'));
-const site = await readJson('config/site.json');
+const locale = option('--locale', 'zh-Hant');
+if (!['zh-Hant', 'en'].includes(locale)) throw new Error('不支援的語言');
+const isEnglish = locale === 'en';
+const localePrefix = isEnglish ? '/en' : '';
+const localeOutput = path.join(output, isEnglish ? 'en' : '');
+const site = { ...await readJson('config/site.json'), ...(isEnglish ? await readJson('content/en/site.json') : {}) };
+const ui = isEnglish ? await readJson('content/en/ui.json') : {};
+// 避免公開主機快取舊版 JS/CSS，使新語言介面搭到舊搜尋邏輯。
+const assetHash = createHash('sha256');
+for (const asset of ['styles.css', 'motion.css', 'enhancements.css', 'app.js']) assetHash.update(await readFile(path.join(root, 'public', asset)));
+const assetVersion = assetHash.digest('hex').slice(0, 12);
 site.baseUrl = option('--base-url', site.baseUrl);
-const posts = (await readJson('content/posts.json')).sort((a, b) => b.date.localeCompare(a.date));
-const projects = await readJson('content/projects.json');
+const posts = (await readJson(`content/${isEnglish ? 'en/' : ''}posts.json`)).sort((a, b) => b.date.localeCompare(a.date));
+const projects = await readJson(`content/${isEnglish ? 'en/' : ''}projects.json`);
 const motion = { enabled: true, revealDurationMs: 900, revealDistancePx: 28, storyScrollVh: 180, parallaxPx: 28, ...site.motion };
 for (const key of ['revealDurationMs', 'revealDistancePx', 'storyScrollVh', 'parallaxPx']) {
   if (!Number.isFinite(motion[key]) || motion[key] < 0) throw new Error(`動畫參數無效：${key}`);
 }
 const e = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const url = (route) => new URL(route, site.baseUrl).href;
+const originUrl = (route) => new URL(route, site.baseUrl).href;
+const url = (route) => originUrl(`${localePrefix}${route}`);
+// UI 翻譯只在建置階段套用；較長的完整句子先處理，保留內容與 HTML 跳脫。
+function translateUi(html) {
+  for (const [source, translated] of Object.entries(ui).sort((a, b) => b[0].length - a[0].length)) html = html.split(e(source)).join(e(translated));
+  return html;
+}
+function localizeHtml(html) {
+  if (!isEnglish) return html;
+  return translateUi(html).replace(/<a\b[^>]*>/g, (tag) => tag.includes('data-language-switch') ? tag : tag.replace(/href="\/(?!\/)/, 'href="/en/'));
+}
 const postUrl = (post) => `/posts/${post.slug}/`;
 const dateText = (date) => date.replaceAll('-', '.');
 const year = new Intl.DateTimeFormat('en', { year: 'numeric', timeZone: site.timezone }).format(new Date());
@@ -50,10 +71,13 @@ for (const project of projects) if (project.article && !slugs.has(project.articl
 for (const key of ['github', 'linkedin']) if (site[key] && !/^https?:$/.test(new URL(site[key]).protocol)) throw new Error(`${key} 必須為 HTTP(S) 網址`);
 // 在 Windows 進行遞迴刪除前，確認目標恰好是本專案允許的輸出資料夾。
 if (!['dist', 'docs'].includes(path.relative(root, output))) throw new Error('拒絕清除非網站輸出路徑');
-await rm(output, { recursive: true, force: true });
-await mkdir(output, { recursive: true });
-await cp(path.join(root, 'public'), output, { recursive: true });
-await writeFile(path.join(output, '.nojekyll'), '');
+if (!buildArgs.includes('--append')) {
+  await rm(output, { recursive: true, force: true });
+  await mkdir(output, { recursive: true });
+  await cp(path.join(root, 'public'), output, { recursive: true });
+  await writeFile(path.join(output, '.nojekyll'), '');
+}
+await mkdir(localeOutput, { recursive: true });
 
 const nav = (active) => [ ['/', '文章', 'posts'], ['/archive/', '歸檔', 'archive'], ['/projects/', '專案', 'projects'], ['/about/', '關於我', 'about'] ].map(([href, label, id]) => `<a href="${href}"${active === id ? ' aria-current="page"' : ''}>${label}</a>`).join('');
 const demo = (article = false) => site.showDemoNotice ? `<p class="demo-note"><span class="demo-dot" aria-hidden="true"></span>${article ? '示範文章 · 此內容用於展示閱讀版面，尚非本人正式發表。' : '文章內容為版面示範，後續將更新為正式筆記。'}</p>` : '';
@@ -69,13 +93,15 @@ function layout({ title, description = site.description, active, route, body, cl
   <meta name="description" content="${e(description)}">
   <meta name="theme-color" content="#f8f7f3">
   <link rel="canonical" href="${e(url(route))}">
+  <link rel="alternate" hreflang="zh-Hant" href="${e(originUrl(route))}">
+  <link rel="alternate" hreflang="en" href="${e(originUrl(`/en${route}`))}">
   <meta property="og:type" content="${active === 'article' ? 'article' : 'website'}">
   <meta property="og:title" content="${e(title)} · ${e(site.name)}">
   <meta property="og:description" content="${e(description)}"><meta property="og:url" content="${e(url(route))}">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="alternate" type="application/rss+xml" title="${e(site.name)} 的文章" href="/feed.xml">
+  <link rel="alternate" type="application/rss+xml" title="${e(site.name)} 的文章" href="${localePrefix}/feed.xml">
   <script>try{var t=localStorage.getItem('opal-theme');if(['light','dark','auto'].includes(t))document.documentElement.dataset.theme=t}catch{}</script>
-  <link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/motion.css"><script src="/app.js" defer></script>
+  <link rel="stylesheet" href="/styles.css?v=${assetVersion}"><link rel="stylesheet" href="/motion.css?v=${assetVersion}"><link rel="stylesheet" href="/enhancements.css?v=${assetVersion}"><script src="/app.js?v=${assetVersion}" defer></script>
 </head>
 <body data-motion="${motion.enabled !== false}" data-parallax="${motion.parallaxPx}" style="--motion-duration:${motion.revealDurationMs}ms;--reveal-distance:${motion.revealDistancePx}px;--story-height:${motion.storyScrollVh}vh">
   <a href="#main" class="skip-link">跳到主要內容</a>
@@ -83,7 +109,7 @@ function layout({ title, description = site.description, active, route, body, cl
   <div class="top-pattern" aria-hidden="true"></div>
   <header class="site-header shell">
     <a class="brand" href="/" aria-label="${e(site.name)} 首頁">${avatar()}<span>${e(site.name)}<small>THOUGHTS & FIELD NOTES</small></span></a>
-    <div class="header-right"><nav aria-label="主要導覽">${nav(active === 'article' ? 'posts' : active)}</nav><div class="header-tools"><a class="icon-button" href="/?search=1#search" aria-label="搜尋文章">${icon('search')}</a><button type="button" class="icon-button theme-cycle" aria-label="切換配色">${icon('sun')}</button></div></div>
+    <div class="header-right"><nav aria-label="主要導覽">${nav(active === 'article' ? 'posts' : active)}</nav><a class="language-switch" data-language-switch href="${isEnglish ? route : `/en${route}`}" lang="${isEnglish ? 'zh-Hant' : 'en'}" hreflang="${isEnglish ? 'zh-Hant' : 'en'}" aria-label="${isEnglish ? '切換為中文' : 'Switch to English'}">${isEnglish ? '中文' : 'EN'}</a><div class="header-tools"><a class="icon-button" href="/?search=1#search" aria-label="搜尋文章">${icon('search')}</a><button type="button" class="icon-button theme-cycle" aria-label="切換配色">${icon('sun')}</button></div></div>
   </header>
   <main id="main" class="shell ${className}" tabindex="-1">${body}</main>
   <footer class="site-footer shell"><div class="footer-top"><div><a class="footer-name" href="/">${e(site.name)}<span class="opal-dot">.</span></a><p>醫療、AI，與持續學習的日常。</p></div><div class="footer-links">${social()}<a href="/feed.xml">RSS 訂閱 ${icon('rss')}</a></div></div><div class="footer-bottom"><span>© ${year} ${e(site.name)}<span class="footer-aside"> · 寫下來，讓思考留下來。</span></span><div class="theme-options" role="group" aria-label="網站配色"><button type="button" data-theme-choice="light">淺色</button><button type="button" data-theme-choice="dark">深色</button><button type="button" data-theme-choice="auto">自動</button></div></div></footer>
@@ -91,7 +117,7 @@ function layout({ title, description = site.description, active, route, body, cl
 }
 
 // 以逗點分段，手機換行時保留完整語意，避免「之間」被拆開。
-const intro = (eyebrow, title, description) => `<section class="page-intro"><p class="eyebrow"><span class="tiny-line"></span>${e(eyebrow)}</p><h1>${title.split('，').map((part, i, parts) => `<span class="title-clause">${e(part)}${i < parts.length - 1 ? '，' : ''}</span>`).join('')}</h1><p class="intro-description">${e(description)}</p></section>`;
+const intro = (eyebrow, title, description) => `<section class="page-intro"><p class="eyebrow"><span class="tiny-line"></span>${e(eyebrow)}</p><h1>${title.split(isEnglish ? ', ' : '，').map((part, i, parts) => `<span class="title-clause">${e(part)}${i < parts.length - 1 ? (isEnglish ? ', ' : '，') : ''}</span>`).join('')}</h1><p class="intro-description">${e(description)}</p></section>`;
 const articleRow = (post) => `<article class="post-row" data-category="${e(post.category)}" data-search="${e([post.title, post.summary, post.category, ...post.tags].join(' ').toLocaleLowerCase())}"><div class="post-date"><time datetime="${e(post.date)}">${dateText(post.date)}</time><span>${e(post.category)}</span></div><div class="post-content"><h2><a href="${postUrl(post)}">${e(post.title)}<span class="post-arrow">${icon('arrow')}</span></a></h2><p>${e(post.summary)}</p><div class="post-bottom">${tags(post.tags)}<span class="reading-time">${post.minutes} 分鐘閱讀</span></div></div></article>`;
 
 // 原創抽象影像圖層，隨捲動依序介紹研究方向，不使用臨床影像或病人資料。
@@ -114,7 +140,7 @@ const home = intro('A PERSONAL JOURNAL', site.tagline, site.description) + `<a c
 
 await page('/', layout({ title: site.title, route: '/', active: 'posts', body: home, className: 'home-page' }));
 const years = [...new Set(posts.map((post) => post.date.slice(0, 4)))];
-await page('/archive/', layout({ title: '文章歸檔', route: '/archive/', active: 'archive', body: intro('THE ARCHIVE', '把走過的路，整理成筆記。', `共 ${posts.length} 篇筆記，關於醫療影像、模型訓練與工程實作。`) + demo() + years.map((y) => `<section class="archive-year"><h2>${y}<span>${posts.filter((p) => p.date.startsWith(y)).length} 篇</span></h2><div>${posts.filter((p) => p.date.startsWith(y)).map((p) => `<article class="archive-row"><time datetime="${p.date}">${p.date.slice(5).replace('-', '.')}</time><a href="${postUrl(p)}">${e(p.title)}</a><span class="archive-category">${e(p.category)}</span></article>`).join('')}</div></section>`).join('') }));
+await page('/archive/', layout({ title: '文章歸檔', route: '/archive/', active: 'archive', body: intro('THE ARCHIVE', '把走過的路，整理成筆記。', isEnglish ? `${posts.length} notes on medical imaging, model training, and engineering.` : `共 ${posts.length} 篇筆記，關於醫療影像、模型訓練與工程實作。`) + demo() + years.map((y) => `<section class="archive-year"><h2>${y}<span>${posts.filter((p) => p.date.startsWith(y)).length} 篇</span></h2><div>${posts.filter((p) => p.date.startsWith(y)).map((p) => `<article class="archive-row"><time datetime="${p.date}">${p.date.slice(5).replace('-', '.')}</time><a href="${postUrl(p)}">${e(p.title)}</a><span class="archive-category">${e(p.category)}</span></article>`).join('')}</div></section>`).join('') }));
 
 await page('/projects/', layout({ title: '研究與專案', route: '/projects/', active: 'projects', body: intro('RESEARCH & PRACTICE', '把問題，做成可以使用的解答。', '從病理影像研究、放射影像模型，到 Edge AI 部署與醫療系統整合。') + `<p class="project-intro-note">依學經歷整理的研究與實作方向。</p><div class="project-list">${projects.map((project) => `<article class="project"><div class="project-index">${e(project.id)}</div><div><p class="eyebrow">${e(project.subtitle)}</p><h2>${e(project.title)}</h2><p class="project-description">${e(project.description)}</p>${tags(project.tags)}<ul>${project.focus.map((item) => `<li>${e(item)}</li>`).join('')}</ul><a class="text-link" href="/posts/${e(project.article)}/">相關主題筆記${site.showDemoNotice ? '（示範）' : ''} ${icon('arrow')}</a></div></article>`).join('')}</div>` }));
 
@@ -136,14 +162,14 @@ for (const [index, post] of posts.entries()) {
   const body = `<a class="back-link" href="/">← 回到所有文章</a><header class="article-header"><p class="eyebrow">${e(post.category)}<span> / </span><time datetime="${post.date}">${dateText(post.date)}</time><span> / </span>${post.minutes} 分鐘閱讀</p><h1>${e(post.title)}</h1><p class="article-lead">${e(post.summary)}</p>${tags(post.tags)}${demo(true)}</header><div class="article-layout"><article class="prose">${post.sections.map(sectionHtml).join('')}<div class="article-signature">${avatar()}<div>${e(site.name)}<p>醫療、AI，與持續學習的日常。</p></div></div></article><aside class="article-toc" aria-label="文章目錄"><p>這篇筆記</p>${headings}</aside></div><a class="next-article" href="${postUrl(other)}"><span>繼續閱讀 ${icon('arrow')}</span><h2>${e(other.title)}</h2><p>${e(other.summary)}</p></a>`;
   await page(postUrl(post), layout({ title: post.title, description: post.summary, active: 'article', route: postUrl(post), body, className: 'article-page' }));
 }
-await writeFile(path.join(output, '404.html'), layout({ title: '找不到這一頁', route: '/404.html', body: `<section class="not-found"><p class="eyebrow">404 / A SMALL DETOUR</p><h1>這一頁，還沒寫到。</h1><p>也許網址有些不同，回到首頁繼續閱讀吧。</p><a href="/" class="text-link">回到所有文章 ${icon('arrow')}</a></section>` }), 'utf8');
-await writeFile(path.join(output, 'feed.xml'), `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>${e(site.name)} · ${e(site.title)}${site.showDemoNotice ? '（示範內容）' : ''}</title><link>${e(site.baseUrl)}</link><description>${e(site.description)}</description><language>zh-TW</language><atom:link href="${e(url('/feed.xml'))}" rel="self" type="application/rss+xml"/>${posts.map((p) => `<item><title>${e(p.title)}</title><link>${e(url(postUrl(p)))}</link><guid isPermaLink="true">${e(url(postUrl(p)))}</guid><pubDate>${new Date(`${p.date}T00:00:00+08:00`).toUTCString()}</pubDate><description>${site.showDemoNotice ? '【示範文章】' : ''}${e(p.summary)}</description></item>`).join('')}</channel></rss>`, 'utf8');
-await writeFile(path.join(output, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${['/', '/about/', '/projects/', '/archive/', ...posts.map(postUrl)].map((route) => `<url><loc>${e(url(route))}</loc></url>`).join('')}</urlset>`, 'utf8');
-await writeFile(path.join(output, 'robots.txt'), `User-agent: *\nAllow: /\nSitemap: ${url('/sitemap.xml')}\n`, 'utf8');
+await writeFile(path.join(localeOutput, '404.html'), localizeHtml(layout({ title: '找不到這一頁', route: '/404.html', body: `<section class="not-found"><p class="eyebrow">404 / A SMALL DETOUR</p><h1>這一頁，還沒寫到。</h1><p>也許網址有些不同，回到首頁繼續閱讀吧。</p><a href="/" class="text-link">回到所有文章 ${icon('arrow')}</a></section>` })), 'utf8');
+await writeFile(path.join(localeOutput, 'feed.xml'), translateUi(`<?xml version="1.0" encoding="UTF-8"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>${e(site.name)} · ${e(site.title)}${site.showDemoNotice ? '（示範內容）' : ''}</title><link>${e(site.baseUrl)}</link><description>${e(site.description)}</description><language>${isEnglish ? 'en' : 'zh-TW'}</language><atom:link href="${e(url('/feed.xml'))}" rel="self" type="application/rss+xml"/>${posts.map((p) => `<item><title>${e(p.title)}</title><link>${e(url(postUrl(p)))}</link><guid isPermaLink="true">${e(url(postUrl(p)))}</guid><pubDate>${new Date(`${p.date}T00:00:00+08:00`).toUTCString()}</pubDate><description>${site.showDemoNotice ? '【示範文章】' : ''}${e(p.summary)}</description></item>`).join('')}</channel></rss>`), 'utf8');
+await writeFile(path.join(localeOutput, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${['/', '/about/', '/projects/', '/archive/', ...posts.map(postUrl)].flatMap((route) => (isEnglish ? [url(route)] : [originUrl(route), originUrl(`/en${route}`)])).map((address) => `<url><loc>${e(address)}</loc></url>`).join('')}</urlset>`, 'utf8');
+await writeFile(path.join(localeOutput, 'robots.txt'), `User-agent: *\nAllow: /\nSitemap: ${url('/sitemap.xml')}\n`, 'utf8');
 console.log(`Built ${posts.length + 5} pages, RSS and sitemap → ${output}`);
 
 async function page(route, content) {
-  const destination = path.join(output, route, 'index.html');
+  const destination = path.join(localeOutput, route, 'index.html');
   await mkdir(path.dirname(destination), { recursive: true });
-  await writeFile(destination, content, 'utf8');
+  await writeFile(destination, localizeHtml(content), 'utf8');
 }

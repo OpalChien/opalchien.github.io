@@ -1,0 +1,26 @@
+[
+  {
+    "id": "01", "title": "Lightweight Pathology Image Classification", "subtitle": "Master's thesis · Taipei Medical University",
+    "description": "Applying lightweight deep learning models to non-small cell lung cancer pathology image classification, exploring medical image recognition and efficient model architectures.",
+    "tags": ["Digital Pathology", "Deep Learning", "Classification"],
+    "focus": ["Non-small cell lung cancer pathology images", "Lightweight deep learning models", "Image classification research"], "article": "patient-level-split"
+  },
+  {
+    "id": "02", "title": "Radiology AI & Clinical Integration", "subtitle": "Medical imaging · Model development and validation",
+    "description": "Developing lesion detection and organ segmentation models for X-ray, CT, and MRI. Work spans clinical requirements, model training, validation, and system integration, with an ongoing interest in HRCT pulmonary fibrosis segmentation.",
+    "tags": ["YOLO", "U-Net / nnU-Net", "Medical Imaging"],
+    "focus": ["Lesion detection and organ segmentation", "Research interests in HRCT lung and fibrosis segmentation", "Case-level outputs, traceability, and PACS / RIS integration"], "article": "medical-image-geometry"
+  },
+  {
+    "id": "03", "title": "Edge AI Inference & Deployment", "subtitle": "From model experiments to inference on devices",
+    "description": "Deploying Edge AI on Jetson Orin Nano and Raspberry Pi, connecting imaging models to applications through Flask / FastAPI and Docker, and evaluating inference performance and latency.",
+    "tags": ["Edge AI", "FastAPI", "Docker"],
+    "focus": ["On-device inference deployment", "API and container-based system integration", "Performance evaluation and latency optimization"], "article": "from-model-to-workflow"
+  },
+  {
+    "id": "04", "title": "Chest X-rays & Coronary Stenosis Prediction", "subtitle": "Research topic · Medical image analysis",
+    "description": "Investigating chest X-rays as an aid to predicting significant coronary artery stenosis, connecting imaging features to a clinical research question.",
+    "tags": ["CXR", "Clinical Research", "Prediction"],
+    "focus": ["Chest X-ray image analysis", "Clinical prediction questions", "Model results and research evaluation"], "article": "beyond-a-single-metric"
+  }
+]

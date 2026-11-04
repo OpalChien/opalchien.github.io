@@ -1,0 +1,30 @@
+{
+  "language": "en",
+  "title": "Medical AI Notes",
+  "tagline": "Where medicine meets AI, Keep exploring.",
+  "description": "I'm Opal, a medical AI engineer. Notes on imaging research, model experiments, and the engineering work that turns ideas into systems.",
+  "role": "Senior AI Engineer · Medical Imaging · System Integration",
+  "about": [
+    "Hi, I'm Sung-Hung Chien. You can call me Opal.",
+    "I am a Senior AI Engineer at Shin Kong Wu Ho-Su Memorial Hospital, working on radiology AI, deep learning, and system integration. My work includes lesion detection and organ segmentation for X-ray, CT, and MRI.",
+    "My background spans mechanical engineering, medical products, and artificial intelligence. From process integration and equipment design to medical IT, model training, and Edge AI deployment, I consider algorithms alongside hardware and the settings in which they are used.",
+    "During my master's studies in Artificial Intelligence in Medicine at Taipei Medical University, I researched lightweight deep learning models for non-small cell lung cancer pathology image classification. I also worked on using chest X-rays to help predict significant coronary artery stenosis.",
+    "This site is where I collect implementation details, research methods, and questions that arise when connecting AI to medical workflows. Outside work, I enjoy fitness, cooking, and ball sports."
+  ],
+  "experience": [
+    { "period": "Oct 2025 — present", "organization": "Shin Kong Wu Ho-Su Memorial Hospital", "title": "Senior AI Engineer", "description": "Deep learning for radiology, lesion detection, and organ segmentation, from clinical requirements and technical choices to model validation and integration." },
+    { "period": "Feb 2025 — Sep 2025", "organization": "Omnisurgica-Biodesign", "title": "Lead AI Engineer", "description": "Clinical image segmentation and object detection, Flask / FastAPI development, and Edge AI inference deployment on Jetson Orin Nano and Raspberry Pi." },
+    { "period": "Dec 2022 — Feb 2025", "organization": "Foxconn Technology Group · Health Technology", "title": "Product Engineer", "description": "Medical IT hardware and software integration, system configuration, product support, and training for healthcare professionals." },
+    { "period": "Jul 2019 — Nov 2022", "organization": "Wellell Inc.", "title": "Process Integration / Production Project Engineer", "description": "Process improvement for wound care products, equipment and fixture design, and integration of control software and hardware." }
+  ],
+  "education": [
+    { "period": "Sep 2026 — present", "organization": "National Yang Ming Chiao Tung University", "title": "Department of Biomedical Imaging and Radiological Sciences", "description": "Currently enrolled." },
+    { "period": "2022 — 2024", "organization": "Taipei Medical University", "title": "Master's Degree in Artificial Intelligence in Medicine", "description": "Thesis: Lightweight Deep Learning Models for Non-Small Cell Lung Cancer Pathology Image Classification." },
+    { "period": "2014 — 2018", "organization": "Hwa Hsia University of Technology", "title": "Bachelor's Degree in Mechanical Engineering", "description": "Mechanical drawing, materials analysis, and mechanical construction." }
+  ],
+  "skills": [
+    { "title": "Imaging & models", "items": ["Python", "TensorFlow / Keras", "YOLO / U-Net", "OpenCV", "nnU-Net", "MIL"] },
+    { "title": "Systems & deployment", "items": ["Flask / FastAPI", "Docker", "Jetson Orin Nano", "Raspberry Pi", "Edge AI", "PACS / RIS"] },
+    { "title": "Engineering & collaboration", "items": ["System Integration", "Data Analytics", "Project Management", "Jira", "SolidWorks", "LabVIEW"] }
+  ]
+}
