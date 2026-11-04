@@ -1,0 +1,105 @@
+{
+  "name": "Opal.Chien",
+  "portrait": "/opal-portrait.png",
+  "title": "醫療 AI 手記",
+  "tagline": "在醫療與 AI 之間，持續探索。",
+  "description": "我是 Opal，醫療 AI 工程師。這裡記錄影像研究、模型實驗，以及把想法做成系統的工程日常。",
+  "role": "資深 AI 工程師 · 醫療影像 · 系統整合",
+  "baseUrl": "https://opalchien.github.io",
+  "language": "zh-Hant",
+  "timezone": "Asia/Taipei",
+  "email": "",
+  "github": "https://github.com/OpalChien",
+  "linkedin": "https://www.linkedin.com/in/opalchien/",
+  "postsPerPage": 6,
+  "motion": {
+    "enabled": true,
+    "revealDurationMs": 900,
+    "revealDistancePx": 28,
+    "storyScrollVh": 180,
+    "parallaxPx": 28
+  },
+  "showDemoNotice": true,
+  "about": [
+    "你好，我是簡菘宏，也可以叫我 Opal。",
+    "目前在新光吳火獅紀念醫院擔任資深 AI 工程師，投入放射影像 AI、深度學習與系統整合，處理 X-ray、CT、MRI 的病灶偵測及器官分割。",
+    "我的背景橫跨機械工程、醫療產品與人工智慧。從製程整合與設備設計，到醫療 IT、影像模型訓練及 Edge AI 部署，這些經驗讓我習慣同時思考演算法、硬體與實際使用情境。",
+    "在臺北醫學大學人工智慧醫療碩士班期間，我以輕量化深度學習模型進行非小細胞肺癌病理影像分類，也參與胸腔 X 光輔助預測冠狀動脈顯著狹窄的研究。",
+    "這裡用來記錄實作中的細節、研究方法，以及把 AI 帶進醫療工作流程時遇到的問題。工作之外，我喜歡健身、烹飪與各式球類運動。"
+  ],
+  "experience": [
+    {
+      "period": "2025.10 — 至今",
+      "organization": "新光吳火獅紀念醫院",
+      "title": "資深 AI 工程師",
+      "description": "放射影像深度學習、病灶偵測與器官分割；從臨床需求訪談、技術選型到模型落地驗證。"
+    },
+    {
+      "period": "2025.02 — 2025.09",
+      "organization": "Omnisurgica-Biodesign",
+      "title": "主任 AI 工程師",
+      "description": "臨床影像分割與物件偵測、Flask / FastAPI 系統開發，以及 Jetson Orin Nano、Raspberry Pi 的 Edge AI 推論部署。"
+    },
+    {
+      "period": "2022.12 — 2025.02",
+      "organization": "鴻海科技集團 · 健康科技事業群",
+      "title": "產品工程師",
+      "description": "醫療 IT 軟硬體整合、系統配置、產品技術支援與醫療專業人員培訓。"
+    },
+    {
+      "period": "2019.07 — 2022.11",
+      "organization": "雃博股份有限公司 Wellell",
+      "title": "製程整合／生產專案管理工程師",
+      "description": "傷口照護產品的製程優化、設備與治具設計，以及自動控制軟硬體整合。"
+    }
+  ],
+  "education": [
+    {
+      "period": "2022 — 2024",
+      "organization": "臺北醫學大學",
+      "title": "人工智慧醫療碩士",
+      "description": "論文：應用輕量化深度學習模型進行非小細胞肺癌病理影像分類。"
+    },
+    {
+      "period": "2014 — 2018",
+      "organization": "華夏科技大學",
+      "title": "機械工程學士",
+      "description": "機械製圖、材料分析與機械建構。"
+    }
+  ],
+  "skills": [
+    {
+      "title": "影像與模型",
+      "items": [
+        "Python",
+        "TensorFlow / Keras",
+        "YOLO / U-Net",
+        "OpenCV",
+        "nnU-Net",
+        "MIL"
+      ]
+    },
+    {
+      "title": "系統與部署",
+      "items": [
+        "Flask / FastAPI",
+        "Docker",
+        "Jetson Orin Nano",
+        "Raspberry Pi",
+        "Edge AI",
+        "PACS / RIS"
+      ]
+    },
+    {
+      "title": "工程與協作",
+      "items": [
+        "System Integration",
+        "Data Analytics",
+        "Project Management",
+        "Jira",
+        "SolidWorks",
+        "LabVIEW"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,143 @@
+[
+  {
+    "slug": "from-model-to-workflow",
+    "title": "從模型到臨床：那些訓練之外的工程細節",
+    "date": "2026-11-04",
+    "category": "工程實作",
+    "summary": "推論只是其中一步。輸入、輸出、錯誤處理與追溯，才讓一個模型成為能被使用的系統。",
+    "tags": ["Clinical AI", "PACS / RIS"],
+    "minutes": 5,
+    "sections": [
+      { "type": "paragraph", "text": "當模型完成訓練，接下來的問題通常不再只有準確率。影像從哪裡來？一次推論對應哪個檢查？失敗之後如何重跑？這些細節決定結果能否被後續工作流程理解。" },
+      { "type": "heading", "text": "先把一次推論的邊界說清楚" },
+      { "type": "paragraph", "text": "在開發前先定義輸入單位是單張影像、單個 series，還是完整 study。保留內部 case ID 與原始檢查的對應，並把模型版本、參數版本和處理時間寫進同一份紀錄。" },
+      { "type": "list", "items": ["輸入檢查：檔案是否完整、series 是否符合預期、必要欄位是否存在。", "處理紀錄：前處理設定、模型版本、執行狀態與錯誤原因。", "輸出契約：結果格式、mask 的座標空間、摘要欄位及存放位置。"] },
+      { "type": "heading", "text": "讓失敗成為可以處理的狀態" },
+      { "type": "paragraph", "text": "不要讓一個讀取失敗的個案中止整批推論。個案層級的 try / except、獨立 log，以及成功與失敗都會寫出的 CSV summary，能讓後續排查有明確入口。重新執行時，也要先確認已完成輸出是否完整，而非只判斷資料夾存在。" },
+      { "type": "callout", "text": "一個容易維護的輸出單位：case ID + 模型版本 + 結果檔案 + 執行狀態。" },
+      { "type": "heading", "text": "把模型當成工作流程的一部分" },
+      { "type": "paragraph", "text": "先用可重現的離線流程確認輸入與輸出，再逐步處理 PACS / RIS 串接。系統整合時，把模型輸出與臨床正式報告的責任界線、人工檢視方式，以及版本更換流程一起定義。這份筆記提供的是工程規劃範例，實際流程仍需依院內規範設計與驗證。" }
+    ]
+  },
+  {
+    "slug": "patient-level-split",
+    "title": "先切病人，再切影像：資料切分的基本功",
+    "date": "2026-10-28",
+    "category": "研究筆記",
+    "summary": "同一位病人的不同檢查，可能比想像中更相似。把資料的獨立性放在模型訓練之前。",
+    "tags": ["Data Leakage", "Validation"],
+    "minutes": 4,
+    "sections": [
+      { "type": "paragraph", "text": "一個影像資料集不一定等於一組獨立樣本。同一位病人可能有多次檢查、一個檢查可能包含不同重建方式，一個 series 又會產生許多切片。若直接打亂所有圖片，這些關聯就容易被忽略。" },
+      { "type": "heading", "text": "先建立可追溯的資料清單" },
+      { "type": "paragraph", "text": "先建立每張影像到 patient、study、series 的對應，再依研究問題決定分組層級。一般病人層級預測任務，可先以 patient ID 分組後切分，並另外確認重複匯出、衍生影像與近似副本。" },
+      { "type": "code", "language": "python", "text": "# 切分完成後，檢查病人集合是否重疊。\ntrain_ids = set(train_df[\"patient_id\"])\nval_ids = set(val_df[\"patient_id\"])\ntest_ids = set(test_df[\"patient_id\"])\n\nassert train_ids.isdisjoint(val_ids)\nassert train_ids.isdisjoint(test_ids)\nassert val_ids.isdisjoint(test_ids)" },
+      { "type": "heading", "text": "讓切分結果成為研究輸出" },
+      { "type": "list", "items": ["保存 split.csv，記錄匿名化 ID、分組與 fold。", "固定 seed，並保存實際分組結果。", "分別描述每組病人數、檢查數與標籤分布。", "確認標準化、特徵選擇與閾值設定只使用允許的訓練或驗證資料。"] },
+      { "type": "paragraph", "text": "如果研究目的是評估跨時間、跨院區或跨設備的泛化能力，還需要對應的獨立切分設計。病人不重疊是起點，但不能取代研究問題本身所要求的外部驗證。" }
+    ]
+  },
+  {
+    "slug": "medical-image-geometry",
+    "title": "一張 mask 的位置，和它的準確度一樣重要",
+    "date": "2026-10-20",
+    "category": "醫療影像",
+    "summary": "從 DICOM 到 NIfTI，記錄 spacing、方向與座標空間，避免分割結果在轉換中失去對齊。",
+    "tags": ["DICOM", "NIfTI", "Segmentation"],
+    "minutes": 6,
+    "sections": [
+      { "type": "paragraph", "text": "影像與 mask 的 array shape 相同，不代表它們位於同一個物理空間。處理三維影像時，需要同時追蹤 spacing、origin、direction，以及前處理過程中做過的變換。" },
+      { "type": "heading", "text": "分清楚 index 與物理座標" },
+      { "type": "paragraph", "text": "陣列索引描述資料在記憶體中的排列，物理座標則描述影像在空間中的位置。不同影像函式庫可能使用不同的軸順序或座標慣例，轉換前要確認讀取與寫入工具的約定。" },
+      { "type": "list", "items": ["讀入時記錄 shape、spacing、origin 與方向矩陣。", "每次 crop、resample 或 reorient 都保留可逆的轉換資訊。", "將預測結果轉回預定的參考影像空間後再輸出。", "用多平面疊圖確認左右、位置及邊界是否對齊。"] },
+      { "type": "heading", "text": "選擇適合資料的插值方式" },
+      { "type": "paragraph", "text": "離散類別 mask 在重採樣時通常使用 nearest-neighbor，避免引入不存在的類別。影像與機率圖則需依用途選擇插值方法。不要只讓兩者使用相同的目標 shape，還要確認目標座標空間一致。" },
+      { "type": "callout", "text": "驗證對齊時，同時看 metadata 與疊圖。單看其中一個，容易漏掉軸順序或方向處理的問題。" },
+      { "type": "heading", "text": "輸出也要能回頭檢查" },
+      { "type": "paragraph", "text": "每個個案可保存原始資訊摘要、前處理設定、最終 mask 與代表性疊圖。計算體積時，使用實際輸出空間的 voxel volume，並在結果表中註明單位與計算方式。" }
+    ]
+  },
+  {
+    "slug": "reproducible-training",
+    "title": "讓下一次訓練，能找回這一次的自己",
+    "date": "2026-10-12",
+    "category": "模型訓練",
+    "summary": "不只設定 seed：把 config、資料切分、checkpoint 與實驗紀錄一起保存，讓結果有跡可循。",
+    "tags": ["PyTorch", "Reproducibility"],
+    "minutes": 5,
+    "sections": [
+      { "type": "paragraph", "text": "重現一個訓練結果，往往需要比一個 seed 更多的資訊。資料版本、實際 fold、前處理流程、套件版本及 checkpoint 的選擇，都會影響我們如何理解一次實驗。" },
+      { "type": "heading", "text": "每個實驗，都有自己的資料夾" },
+      { "type": "code", "language": "text", "text": "runs/experiment_001/\n  config.json\n  split.csv\n  environment.txt\n  train.log\n  metrics.csv\n  checkpoints/\n    best.pt\n    last.pt" },
+      { "type": "heading", "text": "分開保存 best 與 last" },
+      { "type": "paragraph", "text": "best checkpoint 依預先定義的驗證集指標挑選；last checkpoint 則用來恢復中斷的訓練。若要 resume，除了模型權重，也需考慮 optimizer、scheduler、AMP scaler、epoch 和亂數狀態。" },
+      { "type": "list", "items": ["batch size、累積梯度與混合精度設定寫入 config。", "early stopping 的監控指標、方向與 patience 明確記錄。", "每個 epoch 輸出訓練與驗證指標，保留失敗紀錄。", "測試集留到實驗設計確定後，用固定的評估流程處理。"] },
+      { "type": "paragraph", "text": "不同硬體與運算實作可能仍存在非決定性。比起承諾所有執行都完全相同，更實際的做法是記錄環境、控制已知變因，並用重複實驗描述結果的變異。" }
+    ]
+  },
+  {
+    "slug": "beyond-a-single-metric",
+    "title": "模型分數之外：把錯誤個案留下來",
+    "date": "2026-10-05",
+    "category": "研究筆記",
+    "summary": "AUC、Dice 與 mAP 是摘要。逐案輸出與錯誤分析，讓我們看見平均值沒有說完的事。",
+    "tags": ["Evaluation", "Error Analysis"],
+    "minutes": 4,
+    "sections": [
+      { "type": "paragraph", "text": "指標能幫助比較實驗，但一個平均值無法描述所有失敗情境。把每個個案的預測與評估結果留下來，可以在發現問題時回到原始案例，也方便之後整理研究表格與圖。" },
+      { "type": "heading", "text": "先決定評估單位" },
+      { "type": "paragraph", "text": "影像層級、檢查層級與病人層級的結果回答不同問題。做摘要、信賴區間或重抽樣前，先說清楚獨立樣本的單位，避免把同一病人的多張影像當成完全獨立的觀測值。" },
+      { "type": "list", "items": ["分類：保存個案標籤、預測分數、預設閾值與分類結果。", "偵測：保存預測框、分數、標註對應及 FP / FN 個案。", "分割：保存 mask、個案指標、體積與空間資訊。"] },
+      { "type": "heading", "text": "讓評估規則在看測試結果前固定" },
+      { "type": "paragraph", "text": "閾值、配對方式與排除條件都應事先定義。若在測試集上反覆調整規則，最後的數字就難以代表獨立評估。需要探索性的分析時，將它與主要結果分開說明。" },
+      { "type": "callout", "text": "把 summary.csv 當作每次推論的正式輸出，而不是最後寫論文時才補做的檔案。" }
+    ]
+  },
+  {
+    "slug": "config-first",
+    "title": "把路徑移出程式碼，從一份 config 開始",
+    "date": "2026-09-24",
+    "category": "工程實作",
+    "summary": "資料位置、模型權重與輸出目錄集中管理，讓同一段程式更容易在不同環境執行。",
+    "tags": ["Python", "Configuration"],
+    "minutes": 3,
+    "sections": [
+      { "type": "paragraph", "text": "當資料路徑散落在數個 Python 檔案中，換一台機器就可能需要逐行修改。先把輸入、模型、參數與輸出位置集中，是一個小而實用的維護起點。" },
+      { "type": "heading", "text": "設定也應該有驗證" },
+      { "type": "list", "items": ["啟動時檢查輸入目錄與模型權重是否存在。", "明確處理輸出目錄已存在時的行為。", "將最終生效的參數保存到每次執行的輸出資料夾。", "把需要保密的值與可分享的實驗設定分開管理。"] },
+      { "type": "heading", "text": "先求簡單，再求通用" },
+      { "type": "paragraph", "text": "小型研究程式可以從 argparse 加一份 JSON 設定開始。當專案確實需要多階層覆寫與大量實驗組合時，再考慮更完整的設定框架。讓設定容易閱讀，比一開始就建立複雜抽象更有價值。" }
+    ]
+  },
+  {
+    "slug": "mil-traceability",
+    "title": "從 patch 到 patient：MIL 的對應關係不能丟",
+    "date": "2026-09-15",
+    "category": "模型訓練",
+    "summary": "特徵檔之外，還要保存 patch 的來源與位置，才能把 attention 結果帶回原始影像。",
+    "tags": ["MIL", "Attention"],
+    "minutes": 4,
+    "sections": [
+      { "type": "paragraph", "text": "多實例學習常把影像轉成一組特徵，再以 bag 為單位預測。若只保存特徵矩陣，卻沒有記下每一列來自哪個 patch，之後就很難解釋或檢查模型關注的位置。" },
+      { "type": "heading", "text": "特徵與索引，成對保存" },
+      { "type": "list", "items": ["定義 bag 與 patient、study 的對應關係。", "每個 patch 保存來源檔、座標、尺寸與前處理版本。", "確認特徵矩陣列順序與索引清單一致。", "依病人分組，避免同一來源的 patch 跨越資料切分。"] },
+      { "type": "heading", "text": "attention 是檢查入口" },
+      { "type": "paragraph", "text": "attention 權重可用來定位模型在聚合時較重視的實例，但不能直接視為因果解釋或病灶標註。將高權重 patch 帶回原圖，搭配錯誤個案和其他驗證方式，才更容易理解模型行為。" }
+    ]
+  },
+  {
+    "slug": "a-place-for-notes",
+    "title": "留一個地方，記錄實作中的思考",
+    "date": "2026-09-01",
+    "category": "隨筆",
+    "summary": "有些事情不適合只留在終端機裡。把問題、選擇與學到的事，慢慢整理成自己的筆記。",
+    "tags": ["Notes", "Learning"],
+    "minutes": 2,
+    "sections": [
+      { "type": "paragraph", "text": "研究與開發之間，有很多不會出現在最終成果裡的細節：為什麼調整資料切分、怎麼找到方向錯誤，以及某個實驗為什麼決定先停下來。這些過程值得被留下。" },
+      { "type": "heading", "text": "寫給下一次遇到問題的自己" },
+      { "type": "paragraph", "text": "一份筆記不一定要很長。先說清楚問題發生在哪個環境、如何判斷原因、做過哪些修改，以及最後如何確認結果。當情境完整，未來回頭閱讀時就比較容易接上當時的思考。" },
+      { "type": "paragraph", "text": "這個網站會是一個安靜的地方，放置醫療影像 AI、研究方法與軟體工程的筆記，也保留那些還在形成中的想法。" }
+    ]
+  }
+]

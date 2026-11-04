@@ -1,0 +1,38 @@
+[
+  {
+    "id": "01",
+    "title": "輕量化病理影像分類",
+    "subtitle": "碩士論文 · 臺北醫學大學",
+    "description": "應用輕量化深度學習模型進行非小細胞肺癌病理影像分類，探索醫療影像辨識與輕量模型的應用。",
+    "tags": ["Digital Pathology", "Deep Learning", "Classification"],
+    "focus": ["非小細胞肺癌病理影像", "輕量化深度學習模型", "影像分類研究"],
+    "article": "patient-level-split"
+  },
+  {
+    "id": "02",
+    "title": "放射影像 AI 與臨床整合",
+    "subtitle": "醫療影像 · 模型開發與驗證",
+    "description": "以 X-ray、CT、MRI 為核心，開發病灶偵測與器官分割模型。工作涵蓋臨床需求、模型訓練、結果驗證與系統整合，也持續關注 HRCT 肺纖維化分割。",
+    "tags": ["YOLO", "U-Net / nnU-Net", "Medical Imaging"],
+    "focus": ["病灶偵測與器官分割", "HRCT 肺部與纖維化分割研究方向", "個案輸出、結果追溯與 PACS / RIS 整合"],
+    "article": "medical-image-geometry"
+  },
+  {
+    "id": "03",
+    "title": "Edge AI 推論與系統部署",
+    "subtitle": "從模型實驗，到裝置上的推論",
+    "description": "在 Jetson Orin Nano 與 Raspberry Pi 上進行 Edge AI 部署，結合 Flask / FastAPI 與 Docker，串接影像模型及應用系統，並驗證推論效能與延遲。",
+    "tags": ["Edge AI", "FastAPI", "Docker"],
+    "focus": ["裝置端推論部署", "API 與容器化系統整合", "效能驗證及延遲優化"],
+    "article": "from-model-to-workflow"
+  },
+  {
+    "id": "04",
+    "title": "胸腔 X 光與冠狀動脈狹窄預測",
+    "subtitle": "研究主題 · 醫療影像分析",
+    "description": "研究胸腔 X 光輔助預測冠狀動脈顯著狹窄的可能性，連結醫學影像特徵與臨床研究問題。",
+    "tags": ["CXR", "Clinical Research", "Prediction"],
+    "focus": ["胸腔 X 光影像分析", "臨床預測問題", "模型結果與研究評估"],
+    "article": "beyond-a-single-metric"
+  }
+]

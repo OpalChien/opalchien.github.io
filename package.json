@@ -1,0 +1,14 @@
+{
+  "name": "opal-chien-notes",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Opal.Chien 的醫療 AI 個人網站",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "build:pages": "node scripts/build.mjs --out docs --base-url https://opalchien.github.io",
+    "dev": "node scripts/serve.mjs --build",
+    "start": "node scripts/serve.mjs"
+  },
+  "engines": { "node": ">=20" }
+}
