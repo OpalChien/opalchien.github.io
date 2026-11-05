@@ -20,13 +20,13 @@ const site = { ...await readJson('config/site.json'), ...(isEnglish ? await read
 const ui = isEnglish ? await readJson('content/en/ui.json') : {};
 // 避免公開主機快取舊版 JS/CSS，使新語言介面搭到舊搜尋邏輯。
 const assetHash = createHash('sha256');
-for (const asset of ['styles.css', 'motion.css', 'enhancements.css', 'app.js']) assetHash.update(await readFile(path.join(root, 'public', asset)));
+for (const asset of ['styles.css', 'motion.css', 'enhancements.css', 'immersive.css', 'app.js', 'immersive.js']) assetHash.update(await readFile(path.join(root, 'public', asset)));
 const assetVersion = assetHash.digest('hex').slice(0, 12);
 site.baseUrl = option('--base-url', site.baseUrl);
 const posts = (await readJson(`content/${isEnglish ? 'en/' : ''}posts.json`)).sort((a, b) => b.date.localeCompare(a.date));
 const projects = await readJson(`content/${isEnglish ? 'en/' : ''}projects.json`);
-const motion = { enabled: true, revealDurationMs: 900, revealDistancePx: 28, storyScrollVh: 180, parallaxPx: 28, ...site.motion };
-for (const key of ['revealDurationMs', 'revealDistancePx', 'storyScrollVh', 'parallaxPx']) {
+const motion = { enabled: true, immersive: true, particleCount: 32, transitionMs: 240, revealDurationMs: 900, revealDistancePx: 28, storyScrollVh: 180, parallaxPx: 28, ...site.motion };
+for (const key of ['revealDurationMs', 'revealDistancePx', 'storyScrollVh', 'parallaxPx', 'particleCount', 'transitionMs']) {
   if (!Number.isFinite(motion[key]) || motion[key] < 0) throw new Error(`動畫參數無效：${key}`);
 }
 const e = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -101,9 +101,9 @@ function layout({ title, description = site.description, active, route, body, cl
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="alternate" type="application/rss+xml" title="${e(site.name)} 的文章" href="${localePrefix}/feed.xml">
   <script>try{var t=localStorage.getItem('opal-theme');if(['light','dark','auto'].includes(t))document.documentElement.dataset.theme=t}catch{}</script>
-  <link rel="stylesheet" href="/styles.css?v=${assetVersion}"><link rel="stylesheet" href="/motion.css?v=${assetVersion}"><link rel="stylesheet" href="/enhancements.css?v=${assetVersion}"><script src="/app.js?v=${assetVersion}" defer></script>
+  <link rel="stylesheet" href="/styles.css?v=${assetVersion}"><link rel="stylesheet" href="/motion.css?v=${assetVersion}"><link rel="stylesheet" href="/enhancements.css?v=${assetVersion}"><link rel="stylesheet" href="/immersive.css?v=${assetVersion}"><script src="/app.js?v=${assetVersion}" defer></script><script src="/immersive.js?v=${assetVersion}" defer></script>
 </head>
-<body data-motion="${motion.enabled !== false}" data-parallax="${motion.parallaxPx}" style="--motion-duration:${motion.revealDurationMs}ms;--reveal-distance:${motion.revealDistancePx}px;--story-height:${motion.storyScrollVh}vh">
+<body data-motion="${motion.enabled !== false}" data-immersive="${motion.immersive !== false}" data-particles="${motion.particleCount}" data-transition-ms="${motion.transitionMs}" data-parallax="${motion.parallaxPx}" style="--motion-duration:${motion.revealDurationMs}ms;--reveal-distance:${motion.revealDistancePx}px;--story-height:${motion.storyScrollVh}vh">
   <a href="#main" class="skip-link">跳到主要內容</a>
   <div class="reading-progress" aria-hidden="true"></div>
   <div class="top-pattern" aria-hidden="true"></div>
@@ -119,6 +119,9 @@ function layout({ title, description = site.description, active, route, body, cl
 // 以逗點分段，手機換行時保留完整語意，避免「之間」被拆開。
 const intro = (eyebrow, title, description) => `<section class="page-intro"><p class="eyebrow"><span class="tiny-line"></span>${e(eyebrow)}</p><h1>${title.split(isEnglish ? ', ' : '，').map((part, i, parts) => `<span class="title-clause">${e(part)}${i < parts.length - 1 ? (isEnglish ? ', ' : '，') : ''}</span>`).join('')}</h1><p class="intro-description">${e(description)}</p></section>`;
 const articleRow = (post) => `<article class="post-row" data-category="${e(post.category)}" data-search="${e([post.title, post.summary, post.category, ...post.tags].join(' ').toLocaleLowerCase())}"><div class="post-date"><time datetime="${e(post.date)}">${dateText(post.date)}</time><span>${e(post.category)}</span></div><div class="post-content"><h2><a href="${postUrl(post)}">${e(post.title)}<span class="post-arrow">${icon('arrow')}</span></a></h2><p>${e(post.summary)}</p><div class="post-bottom">${tags(post.tags)}<span class="reading-time">${post.minutes} 分鐘閱讀</span></div></div></article>`;
+
+const topics = isEnglish ? ['MEDICAL IMAGING', 'DEEP LEARNING', 'PYTHON', 'SEGMENTATION', 'EDGE AI', 'CLINICAL RESEARCH'] : ['醫療影像', '深度學習', 'PYTHON', '影像分割', 'EDGE AI', '臨床研究'];
+const techMarquee = `<aside class="tech-marquee" aria-label="${isEnglish ? 'Research and engineering topics' : '研究與工程主題'}"><p class="sr-only">${topics.join(isEnglish ? ', ' : '、')}</p><div class="marquee-track" aria-hidden="true">${[0, 1].map(() => `<div class="marquee-set">${topics.map((topic) => `<span><i aria-hidden="true">✳</i>${e(topic)}</span>`).join('')}</div>`).join('')}</div></aside>`;
 
 // 原創抽象影像圖層，隨捲動依序介紹研究方向，不使用臨床影像或病人資料。
 const scrollStory = `<section class="scroll-story" id="explore" aria-label="從影像到臨床的研究方向">
@@ -136,7 +139,7 @@ const scrollStory = `<section class="scroll-story" id="explore" aria-label="從�
   </div>
 </section>`;
 
-const home = intro('A PERSONAL JOURNAL', site.tagline, site.description) + `<a class="scroll-cue" href="#explore"><span>向下探索</span><span aria-hidden="true">↓</span></a>` + scrollStory + `<section id="field-notes" class="journal" aria-label="文章列表" data-page-size="${site.postsPerPage}"><div class="section-heading"><h2>最近的筆記<span class="small-count">${String(posts.length).padStart(2, '0')}</span></h2><a class="text-link" href="/archive/">所有文章 ${icon('arrow')}</a></div><div class="journal-toolbar"><div class="category-filters" role="group" aria-label="文章分類">${categories.map((category, index) => `<button type="button" data-category-filter="${e(category)}" aria-pressed="${index === 0}">${e(category)}</button>`).join('')}</div><label class="search-box" for="search">${icon('search')}<input id="search" type="search" placeholder="搜尋文章…" aria-label="搜尋文章標題、主題或標籤" autocomplete="off"><kbd>/</kbd></label></div>${demo()}<div class="post-list">${posts.map(articleRow).join('')}</div><div class="empty-state" hidden><span aria-hidden="true">∅</span><h2>這裡暫時沒有筆記</h2><p>試試其他關鍵字，或回到全部文章。</p><button type="button" class="reset-search text-link">清除篩選 ${icon('arrow')}</button></div><div class="pagination" hidden><p class="result-summary" aria-live="polite" aria-atomic="true"></p><nav aria-label="文章分頁" class="page-buttons"></nav></div><noscript><p class="demo-note">目前顯示所有文章。啟用 JavaScript 即可使用搜尋、分類與分頁。</p></noscript></section><aside class="closing-note"><span class="note-star" aria-hidden="true">✳</span><p>好的想法，常常從一個小問題開始。<br><span>一些記錄，也是一段持續探索的路。</span></p><a href="/about/" class="text-link">多認識我一點 ${icon('arrow')}</a></aside>`;
+const home = intro('A PERSONAL JOURNAL', site.tagline, site.description) + `<a class="scroll-cue" href="#explore"><span>向下探索</span><span aria-hidden="true">↓</span></a>` + techMarquee + scrollStory + `<section id="field-notes" class="journal" aria-label="文章列表" data-page-size="${site.postsPerPage}"><div class="section-heading"><h2>最近的筆記<span class="small-count">${String(posts.length).padStart(2, '0')}</span></h2><a class="text-link" href="/archive/">所有文章 ${icon('arrow')}</a></div><div class="journal-toolbar"><div class="category-filters" role="group" aria-label="文章分類">${categories.map((category, index) => `<button type="button" data-category-filter="${e(category)}" aria-pressed="${index === 0}">${e(category)}</button>`).join('')}</div><label class="search-box" for="search">${icon('search')}<input id="search" type="search" placeholder="搜尋文章…" aria-label="搜尋文章標題、主題或標籤" autocomplete="off"><kbd>/</kbd></label></div>${demo()}<div class="post-list">${posts.map(articleRow).join('')}</div><div class="empty-state" hidden><span aria-hidden="true">∅</span><h2>這裡暫時沒有筆記</h2><p>試試其他關鍵字，或回到全部文章。</p><button type="button" class="reset-search text-link">清除篩選 ${icon('arrow')}</button></div><div class="pagination" hidden><p class="result-summary" aria-live="polite" aria-atomic="true"></p><nav aria-label="文章分頁" class="page-buttons"></nav></div><noscript><p class="demo-note">目前顯示所有文章。啟用 JavaScript 即可使用搜尋、分類與分頁。</p></noscript></section><aside class="closing-note"><span class="note-star" aria-hidden="true">✳</span><p>好的想法，常常從一個小問題開始。<br><span>一些記錄，也是一段持續探索的路。</span></p><a href="/about/" class="text-link">多認識我一點 ${icon('arrow')}</a></aside>`;
 
 await page('/', layout({ title: site.title, route: '/', active: 'posts', body: home, className: 'home-page' }));
 const years = [...new Set(posts.map((post) => post.date.slice(0, 4)))];

@@ -1,0 +1,103 @@
+/* 更鮮明的視覺動畫：原生捲動、零第三方套件，所有裝飾均不遮擋文字。 */
+.hero-atmosphere { position: absolute; z-index: -1; top: 15px; right: -12px; bottom: 5px; width: 64%; pointer-events: none; opacity: .8; mask-image: linear-gradient(90deg, transparent, #000 30%, #000 85%, transparent); }
+.hero-atmosphere canvas { display: block; width: 100%; height: 100%; }
+.immersive-ready .home-page .title-clause:last-child { background: linear-gradient(110deg, var(--accent) 10%, #91ac69 35%, var(--accent) 52%, #749b81 70%, var(--accent) 90%); background-size: 250% 100%; background-clip: text; -webkit-background-clip: text; color: transparent; }
+.immersive-ready .page-intro.motion-in-view .title-clause:last-child { animation: text-sheen 7s linear infinite; }
+@keyframes text-sheen { from { background-position: 200% 50%; } to { background-position: -50% 50%; } }
+.tech-marquee { overflow: hidden; margin: 0 0 48px; padding: 18px 0; border-block: 1px solid var(--line); color: var(--accent); mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent); }
+.marquee-track { display: flex; width: max-content; }
+.marquee-set { display: flex; align-items: center; gap: 38px; padding-right: 38px; flex-shrink: 0; }
+.marquee-set > span { display: flex; align-items: center; gap: 17px; white-space: nowrap; font-size: 17px; font-weight: 500; letter-spacing: 1px; }
+.marquee-set i { font-style: normal; font-size: 21px; color: var(--faint); }
+.immersive-ready .tech-marquee.motion-in-view .marquee-track { animation: topic-stream 32s linear infinite; }
+.tech-marquee:hover .marquee-track { animation-play-state: paused !important; }
+.immersive-ready .tech-marquee.motion-in-view .marquee-set i { animation: topic-star 12s linear infinite; }
+@keyframes topic-stream { to { transform: translateX(-50%); } }
+@keyframes topic-star { to { transform: rotate(360deg); } }
+
+/* 幕簾使用 pointer-events:none，動畫本身不攔截點擊或鍵盤。 */
+.page-curtain { position: fixed; inset: 0; z-index: 150; display: flex; pointer-events: none; visibility: hidden; }
+.page-curtain > span { flex: 1; height: 100%; background: var(--accent); transform: translateY(105%); }
+.page-curtain > span:nth-child(even) { background: var(--banner); }
+.immersive-ready.is-entering .page-curtain { visibility: visible; }
+.immersive-ready.is-entering .page-curtain > span { animation: curtain-enter 650ms var(--motion-ease) both; }
+.immersive-ready.is-entering .page-curtain > span:nth-child(2) { animation-delay: 45ms; }
+.immersive-ready.is-entering .page-curtain > span:nth-child(3) { animation-delay: 90ms; }
+.immersive-ready.is-entering .page-curtain > span:nth-child(4) { animation-delay: 135ms; }
+.immersive-ready.is-entering .page-curtain > span:nth-child(5) { animation-delay: 180ms; }
+.immersive-ready.is-leaving .page-curtain { visibility: visible; }
+.immersive-ready.is-leaving .page-curtain > span { transform: translateY(0); transition: transform var(--page-exit-ms, 240ms) cubic-bezier(.65,0,.35,1); }
+.immersive-ready.is-leaving .page-curtain > span:nth-child(2n) { transition-delay: 25ms; }
+@keyframes curtain-enter { from { transform: translateY(0); } to { transform: translateY(-105%); } }
+
+.immersive-ready .project { position: relative; isolation: isolate; border: 1px solid var(--line); border-radius: 18px; margin-bottom: 22px; padding: 34px 28px; background: var(--paper); transition: opacity var(--motion-duration) var(--motion-ease), transform var(--motion-duration) var(--motion-ease), border-color 300ms, box-shadow 400ms; }
+.immersive-ready .project[data-reveal] { transform: translate3d(-20px, 25px, 0); }
+.immersive-ready .timeline-item[data-reveal] { transform: translate3d(-18px, 14px, 0); }
+.immersive-ready .project.is-visible, .immersive-ready .project:focus-within, .immersive-ready .timeline-item.is-visible, .immersive-ready .timeline-item:focus-within { transform: none; }
+.immersive-ready .project::before { content: ''; position: absolute; z-index: -1; inset: 0; border-radius: inherit; pointer-events: none; background: radial-gradient(400px circle at var(--card-x, 50%) var(--card-y, 50%), var(--accent-soft), transparent 75%); opacity: 0; transition: opacity 450ms; }
+.immersive-ready .project:hover { border-color: var(--accent); box-shadow: 0 20px 45px -35px var(--accent); }
+.immersive-ready .project:hover::before { opacity: .9; }
+.depth-body { min-width: 0; transform-origin: center; transition: transform 500ms var(--motion-ease); }
+.immersive-ready .project .depth-body { transform: perspective(1000px) rotateX(var(--card-tilt-x, 0deg)) rotateY(var(--card-tilt-y, 0deg)); }
+.immersive-ready .project-index { transition: transform 700ms var(--motion-ease), color 300ms; }
+.immersive-ready .project:hover .project-index { transform: rotate(-7deg) scale(1.1); color: var(--accent); }
+.immersive-ready .skill-columns > div { position: relative; padding: 24px 19px; border: 1px solid var(--line); border-radius: 14px; background: var(--paper); transition: opacity 900ms var(--motion-ease), transform 650ms var(--motion-ease), box-shadow 500ms, border-color 400ms; }
+@media (hover: hover) {
+  .immersive-ready .skill-columns > div.is-visible:hover { transform: translateY(-9px); border-color: var(--accent); box-shadow: 0 20px 35px -30px var(--accent); }
+  .immersive-ready .magnetic-link { transform: translate3d(var(--magnetic-x,0px), var(--magnetic-y,0px), 0); transition: transform 250ms var(--motion-ease), background 250ms; }
+}
+.ripple-target { overflow: hidden; }
+.motion-pause { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; padding: 3px 9px; border: 1px solid var(--line); border-radius: 5px; color: var(--accent); white-space: nowrap; }
+.motion-pause::before { content: 'Ⅱ'; font-size: 11px; }
+.motion-pause[aria-pressed='true']::before { content: '▶'; }
+.motion-pause:hover { background: var(--accent-soft); }
+.animations-paused *, .animations-paused *::before, .animations-paused *::after { animation-play-state: paused !important; }
+.animations-paused .page-curtain { display: none; }
+.animations-paused .page-intro h1, .animations-paused .page-intro .eyebrow, .animations-paused .intro-description, .animations-paused .title-clause { animation: none !important; opacity: 1 !important; filter: none !important; transform: none !important; }
+.animations-paused .depth-body, .animations-paused .magnetic-link, .animations-paused .story-visual { transform: none !important; }
+.ripple-relative { position: relative; }
+.interaction-ripple { position: absolute; display: block; border-radius: 50%; background: var(--accent); opacity: .18; pointer-events: none; transform: scale(0); animation: click-ripple 650ms ease-out forwards; }
+@keyframes click-ripple { to { transform: scale(1); opacity: 0; } }
+
+.portrait-stage { position: relative; display: inline-grid; flex-shrink: 0; isolation: isolate; }
+.portrait-stage .about-portrait { position: relative; z-index: 1; }
+.portrait-orbit { position: absolute; inset: -11px; border: 1px solid var(--line); border-radius: 50%; pointer-events: none; }
+.portrait-orbit:nth-of-type(2) { inset: -17px; border-style: dashed; opacity: .6; border-radius: 50%; }
+.portrait-orbit::after { content: ''; position: absolute; width: 6px; height: 6px; border-radius: 50%; right: 6px; top: 7px; background: var(--accent); box-shadow: 0 0 10px var(--accent-soft); }
+.immersive-ready .portrait-stage.motion-in-view { animation: portrait-float 5s ease-in-out infinite; }
+.immersive-ready .portrait-stage.motion-in-view .portrait-orbit { animation: portrait-orbit 16s linear infinite; }
+.immersive-ready .portrait-stage.motion-in-view .portrait-orbit:nth-of-type(2) { animation-direction: reverse; animation-duration: 24s; }
+@keyframes portrait-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes portrait-orbit { to { transform: rotate(360deg); } }
+.immersive-ready .about-section > h2 { display: inline-block; position: relative; padding-bottom: 12px; }
+.immersive-ready .about-section > h2::after { content: ''; position: absolute; bottom: 0; left: 0; width: 50px; height: 2px; background: var(--accent); transform: scaleX(0); transform-origin: left; transition: transform 900ms var(--motion-ease); }
+.immersive-ready .about-section.motion-in-view > h2::after { transform: scaleX(1); }
+.immersive-ready .about-role { background: linear-gradient(110deg, var(--muted), var(--accent), var(--muted)); background-size: 200%; background-clip: text; -webkit-background-clip: text; color: transparent; }
+.immersive-ready .about-intro.motion-in-view .about-role { animation: text-sheen 8s linear infinite; }
+@media (max-width: 760px) {
+  .hero-atmosphere { width: 100%; right: 0; opacity: .55; }
+  .tech-marquee { margin-bottom: 35px; padding-block: 16px; }
+  .marquee-set { gap: 26px; padding-right: 26px; }
+  .marquee-set > span { font-size: 14px; gap: 12px; }
+  .marquee-set i { font-size: 17px; }
+  .motion-pause { font-size: 12px; }
+  .immersive-ready .project { padding: 25px 16px; gap: 12px; grid-template-columns: 30px minmax(0,1fr); }
+  .immersive-ready .project h2 { font-size: 26px; }
+  .immersive-ready .project .eyebrow { letter-spacing: .5px; }
+  .immersive-ready .skill-columns > div { padding: 22px; }
+  .portrait-orbit { inset: -7px; }
+  .portrait-orbit:nth-of-type(2) { inset: -12px; }
+  .portrait-orbit::after { width: 5px; height: 5px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-atmosphere, .page-curtain, .interaction-ripple { display: none !important; }
+  .immersive-ready .home-page .title-clause:last-child { background: none; color: var(--accent); }
+  .immersive-ready .about-role { background: none; color: var(--muted); }
+  .marquee-track { width: 100%; }
+  .marquee-set { flex-wrap: wrap; justify-content: center; width: 100%; gap: 14px 22px; padding-right: 0; }
+  .marquee-set:nth-child(2) { display: none; }
+  .tech-marquee { mask-image: none; }
+  .immersive-ready .project .depth-body, .immersive-ready .project:hover .project-index, .immersive-ready .skill-columns > div.is-visible:hover, .immersive-ready .magnetic-link { transform: none; }
+  .immersive-ready .about-section > h2::after { transform: scaleX(1); }
+}
+@media print { .hero-atmosphere, .tech-marquee, .page-curtain, .portrait-orbit { display: none !important; } .immersive-ready .project, .immersive-ready .skill-columns > div { border: 0; padding: 0; box-shadow: none; } }

@@ -14,6 +14,9 @@
   "postsPerPage": 6,
   "motion": {
     "enabled": true,
+    "immersive": true,
+    "particleCount": 32,
+    "transitionMs": 240,
     "revealDurationMs": 900,
     "revealDistancePx": 28,
     "storyScrollVh": 180,
